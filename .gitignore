@@ -28,5 +28,6 @@ Thumbs.db
 # Generated reports/logs
 *.log
 *.tmp
+design_doc_extracted.txt
 dist/
 build/

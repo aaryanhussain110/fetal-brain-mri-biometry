@@ -65,6 +65,5 @@ tests/test_calculator.py: 9/9 passing
 ## Notes
 
 - The primary documented server command is `uvicorn main:app --reload`.
-- The `app/` package is retained as a legacy compatibility path, but the root `main.py` app is the current source of truth.
 - The REF corpus has numbering gaps. For example, `REF_036` is not present.
 - Current lookup tables are realistic generated reference curves with documented row overrides, not a complete verbatim reproduction of every source table.

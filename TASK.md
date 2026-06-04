@@ -64,6 +64,5 @@ OK
 ## Known Documentation Notes
 
 - The primary app entry point is `main.py`.
-- `app/` remains in the workspace as a legacy compatibility package.
 - Generated lookup tables are realistic mock growth curves with documented Brain BPD overrides, not a full verbatim reproduction of every source-paper table.
 - The AI layer is assistive and source-grounded, but final clinical report approval remains with the radiologist.

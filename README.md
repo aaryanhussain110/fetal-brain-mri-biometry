@@ -56,7 +56,6 @@ http://127.0.0.1:8000
 - `templates/partials/workspace.html`: HTMX-updated calculator workspace, report panel, and warning-card layout.
 - `knowledge/`: local medical REF corpus used by report generation and Copilot retrieval.
 - `tests/test_calculator.py`: current numerical and workflow regression suite.
-- `app/`: legacy compatibility package retained in the workspace, but not the primary documented entry point.
 
 ## Corpus Attribution
 

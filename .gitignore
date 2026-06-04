@@ -1,0 +1,32 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Local secrets and API keys
+.env
+.env.*
+*.key
+*.pem
+*API*Key*
+*api*key*
+*secret*
+*token*
+New Text Document.txt
+
+# Local OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Generated reports/logs
+*.log
+*.tmp
+dist/
+build/

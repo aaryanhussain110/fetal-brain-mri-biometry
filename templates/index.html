@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+
+<body
+    class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.18),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#f1f5f9_48%,_#eef2f7_100%)] text-slate-800">
+    {% include "partials/workspace.html" %}
+
+    <script>
+        function toggleMethodologyPanel() {
+            const panel = document.getElementById("methodology-panel");
+            const stateField = document.getElementById("methodology-open-state");
+            const toggleButton = document.getElementById("methodology-toggle");
+
+            if (!panel || !stateField) {
+                return;
+            }
+
+            const isOpen = stateField.value === "true";
+            const nextIsOpen = !isOpen;
+
+            stateField.value = nextIsOpen ? "true" : "false";
+            panel.classList.toggle("max-h-0", !nextIsOpen);
+            panel.classList.toggle("opacity-0", !nextIsOpen);
+            panel.classList.toggle("border-transparent", !nextIsOpen);
+            panel.classList.toggle("max-h-[28rem]", nextIsOpen);
+            panel.classList.toggle("opacity-100", nextIsOpen);
+            panel.classList.toggle("border-stone-200", nextIsOpen);
+
+            if (toggleButton) {
+                toggleButton.setAttribute("aria-expanded", nextIsOpen ? "true" : "false");
+            }
+        }
+
+        function requestWorkspaceRefresh() {
+            const form = document.getElementById("biometry-form");
+            if (form) {
+                if (typeof form.requestSubmit === "function") {
+                    form.requestSubmit();
+                    return;
+                }
+
+                if (window.htmx) {
+                    htmx.trigger(form, "submit");
+                    return;
+                }
+
+                form.submit();
+            }
+        }
+
+        function setFieldValue(name, value) {
+            const field = document.querySelector(`[name="${name}"]`);
+            if (!field) {
+                return;
+            }
+
+            field.value = value;
+        }
+
+        function clearMeasurementInputs() {
+            const inputs = document.querySelectorAll('#biometry-form input[type="number"][name]');
+            inputs.forEach((input) => {
+                input.value = "";
+            });
+        }
+
+        function applySample(sampleName) {
+            const samples = {
+                normal: {
+                    ga_weeks: "21",
+                    ga_days: "0",
+                    field_strength: "1.5T",
+                    motion_artifact: "None",
+                    reference_profile: "Standard Biometry: Kyriakopoulou 2017 + Garel/Tilea",
+                    skull_bpd: "49.7",
+                    skull_ofd: "64.2",
+                    brain_bpd: "48.6",
+                    brain_ofd: "55.0",
+                    left_ventricular_diameter: "6.4",
+                    right_ventricular_diameter: "6.3",
+                    third_ventricle_width: "1.8",
+                    corpus_callosum_length: "21.6",
+                    csp_width: "4.3",
+                    transcerebellar_diameter: "23.9",
+                    vermian_height: "11.4",
+                    vermian_ap_diameter: "8.9",
+                    cisterna_magna_depth: "4.9",
+                    tegmento_vermian_angle: "22.4",
+                    tdpf: "26.1960",
+                    csa: "68.9924",
+                    pons_ap_diameter: "6.9"
+                },
+                flagged: {
+                    ga_weeks: "24",
+                    ga_days: "0",
+                    field_strength: "1.5T",
+                    motion_artifact: "None",
+                    reference_profile: "Posterior Fossa / ONTD: Woitek 2014 + Bahlmann 2015",
+                    skull_bpd: "57.6",
+                    skull_ofd: "74.2",
+                    brain_bpd: "49.8",
+                    brain_ofd: "63.7",
+                    left_ventricular_diameter: "16.0",
+                    right_ventricular_diameter: "15.2",
+                    third_ventricle_width: "2.0",
+                    corpus_callosum_length: "25.5",
+                    csp_width: "4.9",
+                    transcerebellar_diameter: "28.2",
+                    vermian_height: "13.5",
+                    vermian_ap_diameter: "10.5",
+                    cisterna_magna_depth: "5.5",
+                    tegmento_vermian_angle: "20.7",
+                    tdpf: "24.0",
+                    csa: "55.0",
+                    pons_ap_diameter: "8.0"
+                }
+            };
+
+            const sample = samples[sampleName];
+            if (!sample) {
+                return;
+            }
+
+            clearMeasurementInputs();
+            setFieldValue("active_sample", sampleName);
+            Object.entries(sample).forEach(([name, value]) => {
+                setFieldValue(name, value);
+            });
+
+            requestWorkspaceRefresh();
+        }
+
+        function showCopyToast(message) {
+            const toast = document.getElementById("copy-toast");
+            if (!toast) {
+                return;
+            }
+
+            toast.textContent = message;
+            toast.classList.remove("translate-y-6", "opacity-0", "pointer-events-none");
+            toast.classList.add("translate-y-0", "opacity-100");
+
+            window.clearTimeout(window.copyToastTimeout);
+            window.copyToastTimeout = window.setTimeout(() => {
+                toast.classList.add("translate-y-6", "opacity-0", "pointer-events-none");
+                toast.classList.remove("translate-y-0", "opacity-100");
+            }, 2200);
+        }
+
+        async function copyPreviewToClipboard() {
+            const textarea = document.getElementById("preview-output");
+            if (!textarea) {
+                return;
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(textarea.value);
+                showCopyToast("Structured preview copied.");
+                return;
+            }
+
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length);
+            document.execCommand("copy");
+            showCopyToast("Structured preview copied.");
+        }
+        function updateCitationBanner() {
+            const banner = document.getElementById("sample-citation-banner");
+            if (!banner) return;
+
+            const activeSampleField = document.getElementById("active-sample-state");
+            const currentSample = activeSampleField ? activeSampleField.value : "";
+
+            if (!currentSample) {
+                localStorage.removeItem("cached_sample");
+            }
+
+            if (currentSample === "normal") {
+                banner.innerHTML = "📄 <strong>Normal Cohort Data:</strong> Biometric midlines and parameters mapped from the 50th percentile control medians published in <em>Kyriakopoulou et al. (2017)</em> and <em>Woitek et al. (2014)</em>.";
+                banner.classList.remove("hidden");
+            } else if (currentSample === "flagged") {
+                banner.innerHTML = "🚨 <strong>Pathological Cohort Data:</strong> Enlarged ventricle parameters and posterior fossa dimensions extracted directly from the abnormal case databases in <em>Giorgione et al. (2022)</em> and <em>Woitek et al. (2014)</em>.";
+                banner.classList.remove("hidden");
+            } else {
+                banner.innerHTML = "";
+                banner.classList.add("hidden");
+            }
+        }
+
+        function updateReportButtonState() {
+            const form = document.getElementById("biometry-form");
+            const button = document.getElementById("generate-report-button");
+            const label = document.getElementById("generate-report-button-label");
+            if (!form || !button) return;
+
+            const measurementInputs = Array.from(form.querySelectorAll('input[type="number"][name]'));
+            const isComplete = measurementInputs.length > 0 && measurementInputs.every((input) => input.value.trim() !== "");
+
+            button.disabled = !isComplete;
+            if (label) {
+                label.textContent = isComplete
+                    ? "Generate AI Report & Clinical Next Steps"
+                    : "Complete all measurements to generate report";
+            }
+        }
+
+        document.addEventListener("htmx:afterSwap", function () {
+            updateCitationBanner();
+            updateReportButtonState();
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            updateCitationBanner();
+            updateReportButtonState();
+        });
+
+        document.addEventListener("input", function (evt) {
+            if (evt.target && evt.target.closest && evt.target.closest("#biometry-form")) {
+                updateReportButtonState();
+            }
+        });
+        let activeInputId = null;
+
+        document.addEventListener("htmx:beforeRequest", function (evt) {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.type === "number" || activeEl.type === "text")) {
+                activeInputId = activeEl.id;
+            }
+        });
+
+        document.addEventListener("htmx:afterSwap", function (evt) {
+            if (activeInputId) {
+                const inputEl = document.getElementById(activeInputId);
+                if (inputEl) {
+                    inputEl.focus();
+
+                    const originalType = inputEl.type;
+                    if (originalType === "number") {
+                        inputEl.type = "text";
+                    }
+
+                    const valLength = inputEl.value.length;
+                    inputEl.setSelectionRange(valLength, valLength);
+
+                    if (originalType === "number") {
+                        inputEl.type = originalType;
+                    }
+                }
+                activeInputId = null;
+            }
+        });
+    </script>
+    <div id="copy-toast"
+        class="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 translate-y-6 rounded-full border border-emerald-200 bg-emerald-950 px-4 py-2 text-xs font-semibold text-white opacity-0 shadow-xl transition-all duration-300">
+        Structured preview copied.
+    </div>
+    <footer class="mt-8 mb-6 flex justify-center px-4 col-span-full w-full">
+        <div class="max-w-3xl rounded-full bg-amber-50 border border-amber-200 px-6 py-2.5 text-center shadow-sm">
+            <p class="text-xs font-medium text-amber-900 leading-relaxed">
+                <span
+                    class="inline-flex items-center font-bold uppercase tracking-wider text-amber-700 bg-amber-200 px-1.5 py-0.5 rounded text-[10px] mr-2">
+                    ⚠️ Notice
+                </span>
+                This application is a <strong>research implementation currently under evaluation and
+                    verification</strong>, and is not intended for standalone clinical diagnostic use, medical advice,
+                or real patient evaluation. <strong>Make sure to double check any findings before making conclusions
+                    based on this tool.</strong>
+            </p>
+        </div>
+    </footer>

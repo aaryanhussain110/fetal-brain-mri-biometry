@@ -1,0 +1,77 @@
+[
+  {
+    "parameter_id": "skull_bpd",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "skull_ofd",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "brain_bpd",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "brain_ofd",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "left_ventricular_diameter",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "right_ventricular_diameter",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "third_ventricle_width",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "corpus_callosum_length",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "csp_width",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "transcerebellar_diameter",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "vermian_height",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "vermian_ap_diameter",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "cisterna_magna_depth",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "tegmento_vermian_angle",
+    "source": "Validated literature table pending import",
+    "data": []
+  },
+  {
+    "parameter_id": "pons_ap_diameter",
+    "source": "Validated literature table pending import",
+    "data": []
+  }
+]

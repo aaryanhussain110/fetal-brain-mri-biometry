@@ -324,12 +324,17 @@
         </div>
         <button id="generate-report-button" hx-post="/generate-report" hx-target="#ai-report-box" hx-swap="innerHTML"
             hx-include="#biometry-form" hx-sync="this:drop" hx-disabled-elt="this" type="button"
+            hx-on::before-request="const label=document.getElementById('generate-report-button-label'); if(label){label.textContent='Generating grounded report...';}"
+            hx-on::after-request="const label=document.getElementById('generate-report-button-label'); if(label){label.textContent='Generate AI Report & Clinical Next Steps';}"
             {% if not all_measurements_complete %}disabled{% endif %}
             class="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white shadow-md transition duration-200 hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">
             <span id="generate-report-button-label">
                 {% if all_measurements_complete %}Generate AI Report & Clinical Next Steps{% else %}Complete all measurements to generate report{% endif %}
             </span>
         </button>
+        <p class="mt-2 text-center text-[11px] leading-4 text-slate-500">
+            Gemini is allowed time to produce a grounded response; the local evidence fallback is used only if necessary.
+        </p>
 
         <div id="ai-report-box" class="mt-4">
         </div>

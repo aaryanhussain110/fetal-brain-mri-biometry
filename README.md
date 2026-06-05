@@ -36,6 +36,16 @@ Optional, for live Gemini responses:
 $env:GEMINI_API_KEY="your_api_key_here"
 ```
 
+Optional Gemini timeout settings:
+
+```powershell
+$env:GEMINI_REPORT_TIMEOUT_SECONDS="30"
+$env:GEMINI_CHAT_TIMEOUT_SECONDS="20"
+$env:GEMINI_PAPER_CHAT_TIMEOUT_SECONDS="45"
+```
+
+These defaults give Gemini enough time to produce grounded responses while preserving the local calculator and paper-corpus fallback if Gemini is unavailable, quota-limited, or exceeds the configured timeout.
+
 Start the local server:
 
 ```powershell

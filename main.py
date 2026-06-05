@@ -5,7 +5,8 @@ from contextlib import redirect_stderr
 from dataclasses import dataclass
 from html import escape
 from io import StringIO
-from math import erf, sqrt
+from math import erf, isfinite, sqrt
+import os
 from pathlib import Path
 import re
 from typing import Any
@@ -85,6 +86,21 @@ BASE_DIR = Path(__file__).resolve().parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 _KNOWLEDGE_CORPUS_CACHE: dict[tuple[str, ...], str] = {}
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+
+def _environment_timeout(name: str, default: float) -> float:
+    try:
+        value = float(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+    if not isfinite(value):
+        return default
+    return max(5.0, min(value, 120.0))
+
+
+GEMINI_REPORT_TIMEOUT_SECONDS = _environment_timeout("GEMINI_REPORT_TIMEOUT_SECONDS", 30.0)
+GEMINI_CHAT_TIMEOUT_SECONDS = _environment_timeout("GEMINI_CHAT_TIMEOUT_SECONDS", 20.0)
+GEMINI_PAPER_CHAT_TIMEOUT_SECONDS = _environment_timeout("GEMINI_PAPER_CHAT_TIMEOUT_SECONDS", 45.0)
 
 GENERIC_CORPUS_QUERY_TOKENS = {
     "about",
@@ -187,7 +203,10 @@ async def generate_report(request: Request):
             rule_text=rule_text,
         )
         report_html = _strip_markdown_fences(
-            await _generate_gemini_text_with_timeout(prompt, timeout_seconds=4.0)
+            await _generate_gemini_text_with_timeout(
+                prompt,
+                timeout_seconds=GEMINI_REPORT_TIMEOUT_SECONDS,
+            )
         )
         if not report_html:
             raise RuntimeError("Gemini returned an empty report.")
@@ -244,7 +263,11 @@ async def chat_consult(request: Request):
 
     grounded_context = _augment_chat_context_for_query(query=normalized_query, context=context)
     is_paper_query = _should_answer_from_local_ref_index(normalized_query)
-    chat_timeout = 20.0 if is_paper_query else 8.0
+    chat_timeout = (
+        GEMINI_PAPER_CHAT_TIMEOUT_SECONDS
+        if is_paper_query
+        else GEMINI_CHAT_TIMEOUT_SECONDS
+    )
     chat_prompt = (
         "You are an expert pediatric neuroradiologist consulting on a case. "
         f"Answer this user follow-up question: '{normalized_query}'. "

@@ -53,6 +53,7 @@ tests/test_calculator.py: 9/9 passing
 - `POST /chat-consult` implemented.
 - Local `knowledge/` REF corpus integrated.
 - Gemini attempted when API key, package, and quota are available.
+- Gemini report and chat timeouts are deployment-configurable, with longer defaults to avoid unnecessary fallback responses.
 - Local fallback handles Gemini timeout, quota, or missing package.
 - Patient-stat and diagnosis questions are answered from the current patient summary.
 - Paper questions route to REF-specific retrieval.

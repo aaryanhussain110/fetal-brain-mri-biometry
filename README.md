@@ -12,6 +12,8 @@ pinned: false
 
 Standalone FastAPI application for fetal brain MRI biometry entry, z-score/percentile calculation, structured report support, dynamic clinical warning cards, and local REF-corpus assisted AI consultation.
 
+> **Educational prototype only.** This application is not a validated medical device and must not be used as a substitute for professional clinical judgment, institutional protocols, or independent verification of source literature.
+
 The primary application entry point is `main.py`.
 
 ## Current Features

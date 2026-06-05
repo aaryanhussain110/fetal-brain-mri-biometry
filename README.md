@@ -1,3 +1,13 @@
+---
+title: Fetal Brain MRI Biometry
+emoji: 🧠
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Fetal Brain MRI Biometry Calculator
 
 Standalone FastAPI application for fetal brain MRI biometry entry, z-score/percentile calculation, structured report support, dynamic clinical warning cards, and local REF-corpus assisted AI consultation.

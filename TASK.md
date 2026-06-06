@@ -64,5 +64,6 @@ OK
 ## Known Documentation Notes
 
 - The primary app entry point is `main.py`.
-- Generated lookup tables are realistic mock growth curves with documented Brain BPD overrides, not a full verbatim reproduction of every source-paper table.
+- Generated lookup tables are realistic reference-shaped growth curves with documented Brain BPD overrides, not a full verbatim reproduction of every source-paper table.
+- Sample profiles are reference-grounded demonstration and stress-test profiles, not literal patient cases extracted from the papers.
 - The AI layer is assistive and source-grounded, but final clinical report approval remains with the radiologist.

@@ -85,6 +85,7 @@ from data_reference import (
 BASE_DIR = Path(__file__).resolve().parent
 KNOWLEDGE_DIR = BASE_DIR / "knowledge"
 _KNOWLEDGE_CORPUS_CACHE: dict[tuple[str, ...], str] = {}
+_TFIDF_RAG_INDEX_CACHE: dict[tuple[str, ...], dict[str, Any] | None] = {}
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
@@ -153,6 +154,15 @@ REF_TOPIC_SUMMARIES = {
     "REF_049": "Bahlmann 2015 focuses on cranial/cerebral signs in spina bifida and supports the Chiari II/open NTD differential pathway.",
 }
 
+
+@dataclass(frozen=True)
+class RagChunk:
+    source_id: str
+    source_name: str
+    page_label: str
+    text: str
+
+
 app = FastAPI(
     title="Fetal Brain MRI Biometry Calculator",
     description="Offline-capable FastAPI scaffold for fetal brain MRI biometry and HTMX-driven workflows.",
@@ -181,7 +191,13 @@ async def generate_report(request: Request):
     rv_val = _float_or_none(va_right)
     ventricular_values = [value for value in (lv_val, rv_val) if value is not None]
     is_critical = max(ventricular_values, default=0.0) >= 15.0
-    rule_text = _ventriculomegaly_rule_text(lv_val, rv_val)
+    rule_parts = [_ventriculomegaly_rule_text(lv_val, rv_val)]
+    warning_titles = {card.get("title", "") for card in page_context["warning_cards"]}
+    if "Chiari II Malformation / Open NTD" in warning_titles:
+        rule_parts.append(
+            "Map to Woitek 2014 because concordantly abnormal TDPF and CSA support a Chiari II/open neural tube defect posterior-fossa pathway."
+        )
+    rule_text = " ".join(part for part in rule_parts if part)
     corpus = _load_retrieval_corpus(rule_text=rule_text)
     patient_context = _build_patient_chat_context(
         ga_weeks=page_context["ga_weeks"],
@@ -279,7 +295,7 @@ async def chat_consult(request: Request):
         "If the exact phrase 'tracking protocol' is not in the paper, synthesize the practical follow-up approach supported by the cited outcomes literature instead of refusing. "
         "When discussing Pagani 2014, focus on mild-to-moderate ventriculomegaly outcome stratification, isolated versus non-isolated status, and interval surveillance. "
         "When discussing Barzilay 2017, focus on ventricular asymmetry, side-specific reporting, associated anomaly review, and follow-up for progression. "
-        "Cite papers by REF filename when using corpus content, for example REF_015 or REF_018. "
+        "Retrieved PDF chunks are labeled [C1], [C2], etc.; cite factual paper claims with those chunk labels when available, and also name the REF filename when useful. "
         f"Use this prior conversation only for continuity, not as a source of new facts:\n{chat_history or 'No prior chat turns.'}\n\n"
         "Base the medical content strictly on this literature grounding context:\n"
         f"{grounded_context}\n"
@@ -628,6 +644,11 @@ def _load_all_paper_overview() -> str:
 def _augment_chat_context_for_query(*, query: str, context: str) -> str:
     keywords = _query_specific_keywords(query)
     all_paper_overview = _load_all_paper_overview()
+    tfidf_context = _retrieve_tfidf_context(
+        query,
+        top_k=8,
+        file_keywords=keywords,
+    )
 
     targeted_context = ""
     if keywords:
@@ -649,6 +670,11 @@ def _augment_chat_context_for_query(*, query: str, context: str) -> str:
         "===== ALL-PAPER COMPACT CORPUS OVERVIEW =====\n"
         f"{all_paper_overview}\n\n"
     )
+    if tfidf_context:
+        combined += (
+            "===== QUERY-SPECIFIC TF-IDF RETRIEVAL =====\n"
+            f"{tfidf_context}\n\n"
+        )
     if targeted_context:
         combined += (
             "===== QUERY-SPECIFIC PAPER RETRIEVAL =====\n"
@@ -1046,6 +1072,202 @@ def _read_knowledge_file(
     return text
 
 
+def _normalize_corpus_text(text: str) -> str:
+    replacements = {
+        "\u00a0": " ",
+        "\u00ad": "",
+        "\ufb01": "fi",
+        "\ufb02": "fl",
+        "\ufb03": "ffi",
+        "\ufb04": "ffl",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    text = re.sub(r"(\w)-\s*\n\s*(\w)", r"\1\2", text)
+    text = re.sub(r"[ \t\r\f\v]+", " ", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def _word_window_chunks(
+    text: str,
+    *,
+    target_words: int = 450,
+    overlap_words: int = 80,
+) -> list[str]:
+    words = text.split()
+    if not words:
+        return []
+    if len(words) <= target_words:
+        return [" ".join(words)]
+
+    step = max(1, target_words - overlap_words)
+    chunks: list[str] = []
+    start = 0
+    while start < len(words):
+        end = min(start + target_words, len(words))
+        chunks.append(" ".join(words[start:end]))
+        if end == len(words):
+            break
+        start += step
+    return chunks
+
+
+def _read_pdf_page_chunks(path: Path) -> list[RagChunk]:
+    try:
+        from pypdf import PdfReader
+    except ModuleNotFoundError:
+        text = _normalize_corpus_text(_read_pdf_text(path))
+        return [
+            RagChunk(
+                source_id=_paper_ref_label(path),
+                source_name=path.name,
+                page_label="all pages",
+                text=chunk,
+            )
+            for chunk in _word_window_chunks(text)
+        ]
+
+    chunks: list[RagChunk] = []
+    with path.open("rb") as handle, redirect_stderr(StringIO()):
+        reader = PdfReader(handle)
+        for page_index, page in enumerate(reader.pages, start=1):
+            text = _normalize_corpus_text(page.extract_text() or "")
+            for chunk in _word_window_chunks(text):
+                chunks.append(
+                    RagChunk(
+                        source_id=_paper_ref_label(path),
+                        source_name=path.name,
+                        page_label=f"page {page_index}",
+                        text=chunk,
+                    )
+                )
+    return chunks
+
+
+def _read_rag_chunks_from_file(path: Path) -> list[RagChunk]:
+    try:
+        if path.suffix.lower() == ".pdf":
+            return _read_pdf_page_chunks(path)
+        text = _normalize_corpus_text(path.read_text(encoding="utf-8", errors="ignore"))
+        return [
+            RagChunk(
+                source_id=_paper_ref_label(path),
+                source_name=path.name,
+                page_label="text file",
+                text=chunk,
+            )
+            for chunk in _word_window_chunks(text)
+        ]
+    except Exception:
+        return []
+
+
+def _candidate_paths_for_keywords(file_keywords: tuple[str, ...]) -> list[Path]:
+    paths = _knowledge_file_paths()
+    if not file_keywords:
+        return paths
+
+    matched_paths = [
+        path
+        for path in paths
+        if any(keyword.lower() in path.name.lower() for keyword in file_keywords)
+    ]
+    return matched_paths or paths
+
+
+def _build_tfidf_rag_index(file_keywords: tuple[str, ...] = ()) -> dict[str, Any] | None:
+    global _TFIDF_RAG_INDEX_CACHE
+
+    cache_key = tuple(sorted(file_keywords)) or ("__all__",)
+    if cache_key in _TFIDF_RAG_INDEX_CACHE:
+        return _TFIDF_RAG_INDEX_CACHE[cache_key]
+
+    paths = _candidate_paths_for_keywords(file_keywords)
+
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+    except ModuleNotFoundError:
+        _TFIDF_RAG_INDEX_CACHE[cache_key] = None
+        return None
+
+    chunks: list[RagChunk] = []
+    for path in paths:
+        chunks.extend(_read_rag_chunks_from_file(path))
+
+    chunks = [chunk for chunk in chunks if len(chunk.text.split()) >= 25]
+    if not chunks:
+        _TFIDF_RAG_INDEX_CACHE[cache_key] = None
+        return None
+
+    vectorizer = TfidfVectorizer(
+        lowercase=True,
+        stop_words="english",
+        ngram_range=(1, 2),
+        max_features=25000,
+        sublinear_tf=True,
+        norm="l2",
+    )
+    matrix = vectorizer.fit_transform([chunk.text for chunk in chunks])
+    _TFIDF_RAG_INDEX_CACHE[cache_key] = {
+        "chunks": chunks,
+        "matrix": matrix,
+        "vectorizer": vectorizer,
+    }
+    return _TFIDF_RAG_INDEX_CACHE[cache_key]
+
+
+def _chunk_matches_file_keywords(chunk: RagChunk, file_keywords: tuple[str, ...]) -> bool:
+    if not file_keywords:
+        return True
+    haystack = f"{chunk.source_id} {chunk.source_name} {_paper_slug(Path(chunk.source_name))}".lower()
+    return any(keyword.lower() in haystack for keyword in file_keywords)
+
+
+def _retrieve_tfidf_context(
+    query: str,
+    *,
+    top_k: int = 6,
+    file_keywords: tuple[str, ...] = (),
+) -> str:
+    index = _build_tfidf_rag_index(file_keywords=file_keywords)
+    if not index:
+        return ""
+
+    chunks: list[RagChunk] = index["chunks"]
+    vectorizer = index["vectorizer"]
+    matrix = index["matrix"]
+    query_vector = vectorizer.transform([query])
+    scores = (matrix @ query_vector.T).toarray().ravel()
+
+    ranked_indices = list(np.argsort(scores)[::-1])
+    selected: list[tuple[float, RagChunk]] = []
+    for chunk_index in ranked_indices:
+        score = float(scores[chunk_index])
+        if score <= 0.0:
+            break
+        chunk = chunks[chunk_index]
+        if not _chunk_matches_file_keywords(chunk, file_keywords):
+            continue
+        selected.append((score, chunk))
+        if len(selected) >= top_k:
+            break
+
+    if not selected and file_keywords:
+        return _retrieve_tfidf_context(query, top_k=top_k, file_keywords=())
+    if not selected:
+        return ""
+
+    context_blocks = ["===== TF-IDF RETRIEVED PDF CHUNKS ====="]
+    for rank, (score, chunk) in enumerate(selected, start=1):
+        excerpt = chunk.text
+        if len(excerpt) > 2200:
+            excerpt = excerpt[:2200].rsplit(" ", 1)[0] + " [chunk truncated]"
+        context_blocks.append(
+            f"[C{rank}] {chunk.source_id} | {chunk.source_name} | {chunk.page_label} | score={score:.3f}\n{excerpt}"
+        )
+    return "\n\n".join(context_blocks)
+
+
 def _load_knowledge_corpus(
     *,
     file_keywords: tuple[str, ...] = (),
@@ -1112,15 +1334,13 @@ def _load_knowledge_corpus(
 def _load_retrieval_corpus(*, rule_text: str) -> str:
     keywords = [
         "kyriakopoulou_2017",
-        "prayer_2023",
-        "woitek_2014",
-        "amugongo_2025",
-        "wada_2025",
         "pagani_2014",
         "giorgione_2022",
         "barzilay_2017",
         "meyer_2018",
     ]
+    if "Woitek 2014" in rule_text or "Chiari" in rule_text or "posterior-fossa" in rule_text:
+        keywords.extend(["woitek_2014", "bahlmann_2015"])
     if "Giorgione 2022" in rule_text or ">= 15.0 mm" in rule_text:
         keywords.append("giorgione_2022")
     if "Pagani 2014" in rule_text or "10.0-14.9 mm" in rule_text:
@@ -1133,11 +1353,37 @@ def _load_retrieval_corpus(*, rule_text: str) -> str:
     ):
         keywords.extend(["pagani_2014", "giorgione_2022", "barzilay_2017"])
 
-    return _load_knowledge_corpus(
-        file_keywords=tuple(dict.fromkeys(keywords)),
+    unique_keywords = tuple(dict.fromkeys(keywords))
+    retrieval_terms = [rule_text, "fetal MRI clinical next steps"]
+    if "Giorgione 2022" in rule_text:
+        retrieval_terms.append(
+            "Giorgione 2022 severe ventriculomegaly atrial diameter 15 mm counseling associated anomalies"
+        )
+    if "Pagani 2014" in rule_text:
+        retrieval_terms.append(
+            "Pagani 2014 mild moderate ventriculomegaly isolated non-isolated interval surveillance"
+        )
+    if "Barzilay 2017" in rule_text:
+        retrieval_terms.append(
+            "Barzilay 2017 ventriculomegaly asymmetry side-specific associated CNS anomalies"
+        )
+    if "No ventriculomegaly" in rule_text:
+        retrieval_terms.append("Kyriakopoulou normative fetal brain biometry centiles")
+    if "Woitek 2014" in rule_text or "Chiari" in rule_text or "posterior-fossa" in rule_text:
+        retrieval_terms.append("Woitek 2014 posterior fossa TDPF CSA Chiari neural tube defect")
+    tfidf_context = _retrieve_tfidf_context(
+        " ".join(retrieval_terms),
+        top_k=8,
+        file_keywords=unique_keywords,
+    )
+    keyword_context = _load_knowledge_corpus(
+        file_keywords=unique_keywords,
         max_chars_per_file=2200,
         max_pdf_pages=2,
     )
+    if tfidf_context:
+        return f"{tfidf_context}\n\n===== KEYWORD PDF EXCERPT BACKUP =====\n{keyword_context}"
+    return keyword_context
 
 
 def _build_chat_context(*, corpus: str, rule_text: str, max_chars: int = 60000) -> str:
@@ -1207,6 +1453,7 @@ Clinical citation routing rules:
 - If either lateral ventricular atrial diameter is >= 15.0 mm, explicitly cite Giorgione 2022.
 - If the maximum lateral ventricular atrial diameter is 10.0-14.9 mm, explicitly cite Pagani 2014.
 - If the left-right ventricular discrepancy exceeds 2.0 mm, explicitly cite Barzilay 2017.
+- Retrieved PDF chunks are labeled [C1], [C2], etc.; cite factual paper claims with those labels when available.
 - Keep language technical, hospital-grade, and useful for radiologist decision support.
 - Include actionable next steps such as urgent MFM review, targeted neurosonography, fetal echocardiography, genetic/infectious workup, interval MRI/ultrasound follow-up, and pediatric neurosurgery referral only when supported by the triggered pattern.
 

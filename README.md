@@ -1,13 +1,3 @@
----
-title: Fetal Brain MRI Biometry
-emoji: 🧠
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # Fetal Brain MRI Biometry Calculator
 
 Standalone FastAPI application for fetal brain MRI biometry entry, z-score/percentile calculation, structured report support, dynamic clinical warning cards, and local REF-corpus assisted AI consultation.
@@ -23,16 +13,36 @@ The primary application entry point is `main.py`.
 - Real-time z-score and percentile calculation.
 - Analytic Woitek-style posterior fossa curves for TDPF and CSA.
 - PCHIP lookup-table interpolation for all table-backed parameters.
-- Complete mock growth tables for weeks 18 through 40, with documented Kyriakopoulou example rows preserved for Brain BPD.
+- Reference-shaped growth tables for weeks 18 through 40, with documented Kyriakopoulou example rows preserved for Brain BPD and safe interpolation for all table-backed parameters.
 - Dynamic clinical warning cards for:
   - Mild-to-moderate ventriculomegaly.
   - Severe ventriculomegaly.
   - Asymmetric lateral ventricles.
   - Chiari II malformation / open neural tube defect pattern.
 - Live structured preview panel and clipboard copy support.
-- AI-RAG generated report card using the local `knowledge/` REF corpus and Gemini when available.
+- AI-RAG generated report card using local PDF extraction, cached TF-IDF retrieval, the `knowledge/` REF corpus, and Gemini when available.
 - Literature Copilot chat that can answer patient-stat questions and paper/REF questions.
 - Local fallback behavior when Gemini is unavailable, slow, or out of quota.
+
+## RAG Alignment
+
+This project follows the high-level workflow from the `sameerkhanna786/gemini_based_rag` teaching project without copying its full package structure:
+
+- Local PDFs are stored as stable `REF_###__title.pdf` corpus files under `knowledge/`.
+- PDF text is extracted locally with `pypdf`.
+- Retrieved context is ranked with a lightweight local `scikit-learn` TF-IDF index built and cached at runtime.
+- Retrieved chunks are labeled as `[C1]`, `[C2]`, etc. so Gemini can ground factual claims in the supplied context.
+- Gemini is used only for final answer/report synthesis when `GEMINI_API_KEY` is configured.
+- The app falls back to deterministic local calculator and REF-corpus logic when Gemini is unavailable, slow, or out of quota.
+- API keys and local environment files are not committed.
+
+## Sample Data Provenance
+
+The `SAMPLE: NORMAL` and `SAMPLE: FLAGGED` buttons are reference-grounded demonstration profiles, not de-identified patient cases.
+
+- `SAMPLE: NORMAL` is a representative 21w0d profile aligned to the calculator's normative reference curves. The Brain BPD anchor preserves the documented Kyriakopoulou-style 21-week 50th centile example used by the test suite.
+- `SAMPLE: FLAGGED` is a constructed 24w0d stress-test profile designed to trigger clinically relevant warning pathways: severe ventriculomegaly at atrial diameter >= 15 mm and the Woitek-style posterior-fossa TDPF/CSA abnormal geometry branch.
+- This is intentional: the source papers generally provide aggregate centiles, equations, thresholds, and outcome associations rather than complete reusable raw patient rows. The calculator therefore uses published reference logic and transparent rule-based samples rather than pretending to contain literal extracted patient data.
 
 ## Run Locally
 

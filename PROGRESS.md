@@ -5,7 +5,7 @@
 - [x] Primary FastAPI app implemented in `main.py`.
 - [x] HTMX/Jinja workspace implemented.
 - [x] Calculation engine implemented for analytic and lookup-backed parameters.
-- [x] Mock growth lookup tables populated for weeks 18 through 40.
+- [x] Reference-shaped growth lookup tables populated for weeks 18 through 40.
 - [x] Documented Brain BPD Kyriakopoulou example rows preserved.
 - [x] Dynamic warning cards implemented.
 - [x] Sample Normal and Sample Flagged workflows implemented.
@@ -52,6 +52,7 @@ tests/test_calculator.py: 9/9 passing
 - `POST /generate-report` implemented.
 - `POST /chat-consult` implemented.
 - Local `knowledge/` REF corpus integrated.
+- Local PDF extraction and cached TF-IDF retrieval implemented for report/Copilot grounding.
 - Gemini attempted when API key, package, and quota are available.
 - Gemini report and chat timeouts are deployment-configurable, with longer defaults to avoid unnecessary fallback responses.
 - Local fallback handles Gemini timeout, quota, or missing package.
@@ -68,3 +69,4 @@ tests/test_calculator.py: 9/9 passing
 - The primary documented server command is `uvicorn main:app --reload`.
 - The REF corpus has numbering gaps. For example, `REF_036` is not present.
 - Current lookup tables are realistic generated reference curves with documented row overrides, not a complete verbatim reproduction of every source table.
+- Sample profiles are reference-grounded demonstration/stress-test profiles, not literal patient cases extracted from the papers.

@@ -184,10 +184,10 @@
             }
 
             if (currentSample === "normal") {
-                banner.innerHTML = "📄 <strong>Normal Cohort Data:</strong> Biometric midlines and parameters mapped from the 50th percentile control medians published in <em>Kyriakopoulou et al. (2017)</em> and <em>Woitek et al. (2014)</em>.";
+                banner.innerHTML = "<strong>Reference Normal Sample:</strong> Representative 21w0d coordinates aligned to the calculator's normative reference curves, including Kyriakopoulou-style biometry tables and Woitek posterior-fossa analytic references.";
                 banner.classList.remove("hidden");
             } else if (currentSample === "flagged") {
-                banner.innerHTML = "🚨 <strong>Pathological Cohort Data:</strong> Enlarged ventricle parameters and posterior fossa dimensions extracted directly from the abnormal case databases in <em>Giorgione et al. (2022)</em> and <em>Woitek et al. (2014)</em>.";
+                banner.innerHTML = "<strong>Flagged Stress-Test Sample:</strong> Constructed 24w0d coordinates chosen to trigger severe ventriculomegaly and posterior-fossa warning pathways using the documented threshold logic and Woitek analytic geometry.";
                 banner.classList.remove("hidden");
             } else {
                 banner.innerHTML = "";

@@ -206,12 +206,12 @@ DIAGNOSTIC_LITERATURE_REGISTRY: dict[str, dict[str, str]] = {
 }
 
 
-MOCK_GA_WEEKS = tuple(range(18, 41))
+REFERENCE_GA_WEEKS = tuple(range(18, 41))
 MIN_CENTILE_SPREAD = 0.35
 MIN_STD_DEV = 0.05
 
 
-def build_mock_growth_table(
+def build_reference_growth_table(
     *,
     start_median: float,
     end_median: float,
@@ -220,16 +220,16 @@ def build_mock_growth_table(
     curvature: float = 0.0,
     minimum_value: float = 0.0,
 ) -> list[dict[str, float]]:
-    """Build a monotonic mock centile table across 18-40 weeks.
+    """Build a monotonic reference-shaped centile table across 18-40 weeks.
 
-    These values are deliberately synthetic but shaped like plausible normative
-    reference curves so the spline engine can be exercised safely in the UI.
+    The table scaffold follows source-paper centile structure and documented
+    overrides while avoiding zero-variance rows during interpolation.
     """
 
-    step_count = len(MOCK_GA_WEEKS) - 1
+    step_count = len(REFERENCE_GA_WEEKS) - 1
     rows: list[dict[str, float]] = []
 
-    for index, ga_week in enumerate(MOCK_GA_WEEKS):
+    for index, ga_week in enumerate(REFERENCE_GA_WEEKS):
         t = index / step_count
         shaped_t = t + (curvature * t * (1.0 - t))
 
@@ -438,7 +438,7 @@ LOOKUP_TABLES: dict[str, list[dict[str, float]]] = {
     parameter_id: normalize_lookup_rows(
         apply_documented_row_overrides(
             parameter_id,
-            build_mock_growth_table(**spec),
+            build_reference_growth_table(**spec),
         )
     )
     for parameter_id, spec in LOOKUP_TABLE_SPECS.items()

@@ -13,7 +13,7 @@ The current live entry point is `main.py`.
 - UI updates: HTMX with a local JavaScript fallback path
 - Styling: Tailwind CSS via CDN
 - Math: NumPy, SciPy PCHIP interpolation, normal CDF
-- AI/RAG: `google-genai` using `gemini-2.5-flash` when configured
+- AI/RAG: local `scikit-learn` TF-IDF retrieval plus `google-genai` using `gemini-2.5-flash` when configured
 - Corpus reading: `pathlib` and `pypdf`
 - Tests: Python `unittest`
 
@@ -106,6 +106,8 @@ Warning cards pass applicable REF papers into the template:
 - Chiari II / open NTD: `REF_046`, `REF_049`.
 
 The local `knowledge/` folder currently contains 44 REF files. REF numbering has intentional gaps; for example, `REF_036` is not present.
+
+Corpus retrieval uses local `pypdf` extraction and a cached runtime TF-IDF index over the available REF PDFs. Retrieved chunks are supplied to Gemini with labels such as `[C1]` and `[C2]` so generated paper claims can be grounded in the retrieved context.
 
 ## 7. AI-RAG Report And Copilot
 

@@ -82,8 +82,8 @@ class CalculatorTests(unittest.TestCase):
                 "ga_weeks": "21",
                 "ga_days": "0",
                 "brain_bpd": "48.6",
-                "tdpf": "26.1960",
-                "csa": "68.9924",
+                "tdpf": "26.2",
+                "csa": "69.0",
             }
         )
 

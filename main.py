@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 try:
     from fastapi import FastAPI, Request
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, RedirectResponse
     from fastapi.templating import Jinja2Templates
 except ModuleNotFoundError:
     class Request:
@@ -27,6 +27,11 @@ except ModuleNotFoundError:
         def __init__(self, content: str = "", *args: Any, **kwargs: Any) -> None:
             self.content = content
             self.body = content
+
+    class RedirectResponse:
+        def __init__(self, url: str, status_code: int = 303, *args: Any, **kwargs: Any) -> None:
+            self.url = url
+            self.status_code = status_code
 
     class Jinja2Templates:
         def __init__(self, directory: str) -> None:
@@ -2231,6 +2236,11 @@ async def home(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/calculate")
+async def calculate_get() -> RedirectResponse:
+    return RedirectResponse(url="/", status_code=303)
+
+
 @app.post("/calculate", response_class=HTMLResponse)
 async def calculate(request: Request) -> HTMLResponse:
     form = await request.form()
@@ -2240,4 +2250,6 @@ async def calculate(request: Request) -> HTMLResponse:
         form_values[key] = str(value)
 
     context = build_page_context(form_values)
+    if not is_htmx(request):
+        return RedirectResponse(url="/", status_code=303)
     return render_workspace(request, context)

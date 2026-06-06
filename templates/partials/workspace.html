@@ -1,6 +1,6 @@
 <div id="workspace-shell" class="mx-auto max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
     <form id="biometry-form" method="post" action="/calculate" hx-post="/calculate"
-        hx-trigger="input delay:400ms from:input, change delay:200ms from:select" hx-target="#workspace-shell"
+        hx-trigger="refreshWorkspace, input delay:400ms from:input, change delay:200ms from:select" hx-target="#workspace-shell"
         hx-swap="outerHTML focus-scroll:true" class="space-y-6">
         <input type="hidden" id="methodology-open-state" name="methodology_open"
             value="{{ form_values.methodology_open if form_values.methodology_open else 'false' }}">
@@ -43,18 +43,18 @@
 
                     <div class="flex flex-wrap items-center gap-2 text-sm">
                         <button type="button"
-                            onclick="localStorage.setItem('cached_sample', 'normal'); applySample('normal'); updateCitationBanner();"
+                            onclick="localStorage.setItem('cached_sample', 'normal'); applySample('normal'); updateCitationBanner(); showActionToast('Reference normal sample loaded.');"
                             class="inline-flex items-center gap-2 rounded-full px-3 py-2 font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700">
                             <span class="text-xs">✦</span> <span>SAMPLE: NORMAL</span>
                         </button>
 
                         <button type="button"
-                            onclick="localStorage.setItem('cached_sample', 'flagged'); applySample('flagged'); updateCitationBanner();"
+                            onclick="localStorage.setItem('cached_sample', 'flagged'); applySample('flagged'); updateCitationBanner(); showActionToast('Flagged stress-test sample loaded.');"
                             class="inline-flex items-center gap-2 rounded-full px-3 py-2 font-semibold text-red-600 transition hover:bg-red-50 hover:text-red-800">
                             <span class="text-xs">✦</span> <span>SAMPLE: FLAGGED</span>
                         </button>
 
-                        <button type="reset" onclick="localStorage.removeItem('cached_sample'); window.location='/'"
+                        <button type="button" onclick="clearWorkspaceWithToast()"
                             class="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50">
                             <span class="text-sm">↻</span> <span>CLEAR</span>
                         </button>
@@ -64,7 +64,7 @@
                             <span class="text-sm">📄</span> <span>COPY PREVIEW</span>
                         </button>
 
-                        <button id="methodology-toggle" type="button" onclick="toggleMethodologyPanel()"
+                        <button id="methodology-toggle" type="button" onclick="toggleMethodologyPanel(); showActionToast(document.getElementById('methodology-open-state') && document.getElementById('methodology-open-state').value === 'true' ? 'Methodology opened.' : 'Methodology collapsed.');"
                             aria-controls="methodology-panel"
                             aria-expanded="{{ 'true' if form_values.methodology_open == 'true' else 'false' }}"
                             class="inline-flex items-center gap-2 rounded-full px-3 py-2 font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-700">
@@ -77,21 +77,32 @@
                 </div>
 
                 <div id="methodology-panel"
-                    class="overflow-hidden border-t bg-stone-100/95 transition-all duration-300 ease-out {% if form_values.methodology_open == 'true' %}max-h-[28rem] border-stone-200 opacity-100{% else %}max-h-0 border-transparent opacity-0{% endif %}">
+                    class="overflow-hidden border-t bg-stone-100/95 transition-all duration-300 ease-out {% if form_values.methodology_open == 'true' %}max-h-[44rem] border-stone-200 opacity-100{% else %}max-h-0 border-transparent opacity-0{% endif %}">
                     <div class="px-5 py-4 text-sm text-slate-700 lg:px-7">
-                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Reference Notes</p>
-                        <ol class="mt-3 space-y-2 pl-5 text-sm leading-6 marker:text-slate-400">
-                            <li>Normative lookup-table structure is modeled around Kyriakopoulou 2017 fetal brain MRI
-                                reference centile curves.</li>
-                            <li>Fractional gestational age is evaluated as completed weeks plus days divided by 7 before
-                                any analytic or spline-based calculation.</li>
-                            <li>When centile tables are loaded, the 50th centile acts as the expected mean and the 5th
-                                to 95th centile spread is converted into an approximate standard deviation under a local
-                                normality assumption.</li>
-                            <li>Posterior fossa diameter and clivus-supraocciput angle are validated directly against
-                                the Woitek 2014 worked-example math, while the broader spline tables still follow the
-                                Kyriakopoulou-style centile schema until source tables are imported in full.</li>
-                        </ol>
+                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Methodology</p>
+                        <div class="mt-3 grid gap-3 lg:grid-cols-2">
+                            <div class="rounded-2xl border border-stone-200 bg-white/80 p-4 shadow-sm">
+                                <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">Biometry Engine</h3>
+                                <ol class="mt-3 space-y-2 pl-5 text-sm leading-6 marker:text-slate-400">
+                                    <li>Fractional gestational age is evaluated as completed weeks plus days divided by 7.</li>
+                                    <li>Kyriakopoulou-style centile tables use PCHIP interpolation across weekly reference rows.</li>
+                                    <li>The interpolated 50th centile acts as the expected mean, while the 5th-to-95th centile envelope is converted into a local standard deviation.</li>
+                                    <li>TDPF and CSA use the Woitek posterior-fossa analytic regressions for z-score calculation and Chiari II/open NTD warning support.</li>
+                                </ol>
+                            </div>
+                            <div class="rounded-2xl border border-stone-200 bg-white/80 p-4 shadow-sm">
+                                <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-slate-600">RAG Workflow</h3>
+                                <ol class="mt-3 space-y-2 pl-5 text-sm leading-6 marker:text-slate-400">
+                                    <li>The local REF paper corpus is stored as stable PDF files and read directly on the server with no PHI storage.</li>
+                                    <li>PDF text is extracted with <code class="rounded bg-stone-100 px-1">pypdf</code>, normalized, split into bounded page-aware chunks, and cached for reuse.</li>
+                                    <li>A lightweight <code class="rounded bg-stone-100 px-1">scikit-learn</code> TF-IDF retriever ranks relevant chunks before any Gemini generation call.</li>
+                                    <li>Retrieved chunks are labeled as [C1], [C2], etc.; Gemini is used only for final grounded report or Copilot synthesis when an API key is available.</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs leading-5 text-slate-500">
+                            This follows the same high-level teaching pattern as Sameer's PDF RAG starter: retrieve locally first, generate second, cite retrieved context, and keep the radiologist responsible for final interpretation.
+                        </p>
                     </div>
                 </div>
 
@@ -99,7 +110,12 @@
                     class="grid gap-4 border-t border-slate-200 bg-slate-50/90 px-5 py-4 md:grid-cols-[180px_180px_minmax(0,1fr)] md:items-end lg:px-7">
 
                     <div id="sample-citation-banner"
-                        class="hidden col-span-full mb-2 rounded-2xl bg-blue-50 border border-blue-100 p-4 text-xs text-blue-900 leading-relaxed shadow-sm font-medium">
+                        class="{% if not form_values.active_sample %}hidden {% endif %}col-span-full mb-2 rounded-2xl bg-blue-50 border border-blue-100 p-4 text-xs text-blue-900 leading-relaxed shadow-sm font-medium">
+                        {% if form_values.active_sample == "normal" %}
+                        <strong>Reference Normal Sample:</strong> Representative 21w0d coordinates aligned to the calculator's normative reference curves, including Kyriakopoulou-style biometry tables and Woitek posterior-fossa analytic references.
+                        {% elif form_values.active_sample == "flagged" %}
+                        <strong>Flagged Stress-Test Sample:</strong> Constructed 24w0d coordinates chosen to trigger severe ventriculomegaly and posterior-fossa warning pathways using the documented threshold logic and Woitek analytic geometry.
+                        {% endif %}
                     </div>
 
                     <label class="block">

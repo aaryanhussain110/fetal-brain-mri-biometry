@@ -14,6 +14,8 @@
     {% include "partials/workspace.html" %}
 
     <script>
+        const FORM_DRAFT_KEY = "fetal_brain_biometry_form_draft";
+
         function toggleMethodologyPanel() {
             const panel = document.getElementById("methodology-panel");
             const stateField = document.getElementById("methodology-open-state");
@@ -30,7 +32,7 @@
             panel.classList.toggle("max-h-0", !nextIsOpen);
             panel.classList.toggle("opacity-0", !nextIsOpen);
             panel.classList.toggle("border-transparent", !nextIsOpen);
-            panel.classList.toggle("max-h-[28rem]", nextIsOpen);
+            panel.classList.toggle("max-h-[44rem]", nextIsOpen);
             panel.classList.toggle("opacity-100", nextIsOpen);
             panel.classList.toggle("border-stone-200", nextIsOpen);
 
@@ -42,13 +44,8 @@
         function requestWorkspaceRefresh() {
             const form = document.getElementById("biometry-form");
             if (form) {
-                if (typeof form.requestSubmit === "function") {
-                    form.requestSubmit();
-                    return;
-                }
-
                 if (window.htmx) {
-                    htmx.trigger(form, "submit");
+                    htmx.trigger(form, "refreshWorkspace");
                     return;
                 }
 
@@ -63,6 +60,55 @@
             }
 
             field.value = value;
+        }
+
+        function draftableFields() {
+            return Array.from(document.querySelectorAll("#biometry-form input[name], #biometry-form select[name], #biometry-form textarea[name]"));
+        }
+
+        function saveFormDraft() {
+            const form = document.getElementById("biometry-form");
+            if (!form) {
+                return;
+            }
+
+            const draft = {};
+            draftableFields().forEach((field) => {
+                if ((field.type === "checkbox" || field.type === "radio") && !field.checked) {
+                    return;
+                }
+                draft[field.name] = field.value;
+            });
+
+            sessionStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(draft));
+        }
+
+        function restoreFormDraft() {
+            const form = document.getElementById("biometry-form");
+            if (!form) {
+                return;
+            }
+
+            const rawDraft = sessionStorage.getItem(FORM_DRAFT_KEY);
+            if (!rawDraft) {
+                return;
+            }
+
+            let draft = {};
+            try {
+                draft = JSON.parse(rawDraft);
+            } catch {
+                sessionStorage.removeItem(FORM_DRAFT_KEY);
+                return;
+            }
+
+            Object.entries(draft).forEach(([name, value]) => {
+                setFieldValue(name, value);
+            });
+
+            updateCitationBanner();
+            updateReportButtonState();
+            requestWorkspaceRefresh();
         }
 
         function clearMeasurementInputs() {
@@ -94,8 +140,8 @@
                     vermian_ap_diameter: "8.9",
                     cisterna_magna_depth: "4.9",
                     tegmento_vermian_angle: "22.4",
-                    tdpf: "26.1960",
-                    csa: "68.9924",
+                    tdpf: "26.2",
+                    csa: "69.0",
                     pons_ap_diameter: "6.9"
                 },
                 flagged: {
@@ -135,10 +181,11 @@
                 setFieldValue(name, value);
             });
 
+            saveFormDraft();
             requestWorkspaceRefresh();
         }
 
-        function showCopyToast(message) {
+        function showActionToast(message) {
             const toast = document.getElementById("copy-toast");
             if (!toast) {
                 return;
@@ -155,6 +202,15 @@
             }, 2200);
         }
 
+        function clearWorkspaceWithToast() {
+            localStorage.removeItem("cached_sample");
+            sessionStorage.removeItem(FORM_DRAFT_KEY);
+            showActionToast("Workspace cleared.");
+            window.setTimeout(() => {
+                window.location = "/";
+            }, 450);
+        }
+
         async function copyPreviewToClipboard() {
             const textarea = document.getElementById("preview-output");
             if (!textarea) {
@@ -163,14 +219,14 @@
 
             if (navigator.clipboard && window.isSecureContext) {
                 await navigator.clipboard.writeText(textarea.value);
-                showCopyToast("Structured preview copied.");
+                showActionToast("Structured preview copied.");
                 return;
             }
 
             textarea.select();
             textarea.setSelectionRange(0, textarea.value.length);
             document.execCommand("copy");
-            showCopyToast("Structured preview copied.");
+            showActionToast("Structured preview copied.");
         }
         function updateCitationBanner() {
             const banner = document.getElementById("sample-citation-banner");
@@ -213,6 +269,9 @@
         }
 
         document.addEventListener("htmx:afterSwap", function () {
+            if (window.location.pathname !== "/") {
+                window.history.replaceState(null, document.title, "/");
+            }
             updateCitationBanner();
             updateReportButtonState();
         });
@@ -220,11 +279,19 @@
         document.addEventListener("DOMContentLoaded", function () {
             updateCitationBanner();
             updateReportButtonState();
+            restoreFormDraft();
         });
 
         document.addEventListener("input", function (evt) {
             if (evt.target && evt.target.closest && evt.target.closest("#biometry-form")) {
+                saveFormDraft();
                 updateReportButtonState();
+            }
+        });
+
+        document.addEventListener("change", function (evt) {
+            if (evt.target && evt.target.closest && evt.target.closest("#biometry-form")) {
+                saveFormDraft();
             }
         });
         let activeInputId = null;
@@ -260,7 +327,7 @@
     </script>
     <div id="copy-toast"
         class="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 translate-y-6 rounded-full border border-emerald-200 bg-emerald-950 px-4 py-2 text-xs font-semibold text-white opacity-0 shadow-xl transition-all duration-300">
-        Structured preview copied.
+        Action complete.
     </div>
     <footer class="mt-8 mb-6 flex justify-center px-4 col-span-full w-full">
         <div class="max-w-3xl rounded-full bg-amber-50 border border-amber-200 px-6 py-2.5 text-center shadow-sm">

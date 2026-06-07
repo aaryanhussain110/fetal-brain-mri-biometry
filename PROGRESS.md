@@ -69,4 +69,4 @@ tests/test_calculator.py: 9/9 passing
 - The primary documented server command is `uvicorn main:app --reload`.
 - The REF corpus has numbering gaps. For example, `REF_036` is not present.
 - Current lookup tables are realistic generated reference curves with documented row overrides, not a complete verbatim reproduction of every source table.
-- Sample profiles are reference-grounded demonstration/stress-test profiles, not literal patient cases extracted from the papers.
+- Sample profiles are reference-grounded normal and abnormal reference profiles, not literal patient cases extracted from the papers.

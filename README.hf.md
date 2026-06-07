@@ -10,6 +10,6 @@ pinned: false
 
 # Fetal Brain MRI Biometry
 
-Educational FastAPI/HTMX fetal brain MRI biometry calculator with local PDF RAG support for report drafting and literature Copilot questions.
+Educational FastAPI/HTMX fetal brain MRI biometry calculator with local PDF retrieval support for report drafting and literature Copilot questions.
 
-This prototype is for educational demonstration only. It is not a validated medical device and must not replace professional clinical judgment, institutional protocols, or independent review of source literature.
+This academic prototype is not a validated medical device and must not replace professional clinical judgment, institutional protocols, or independent review of source literature.

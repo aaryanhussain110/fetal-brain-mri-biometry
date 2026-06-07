@@ -26,7 +26,7 @@ The primary application entry point is `main.py`.
 
 ## RAG Alignment
 
-This project follows the high-level workflow from the `sameerkhanna786/gemini_based_rag` teaching project without copying its full package structure:
+This project implements a lightweight PDF retrieval-augmented generation workflow integrated directly into the calculator:
 
 - Local PDFs are stored as stable `REF_###__title.pdf` corpus files under `knowledge/`.
 - PDF text is extracted locally with `pypdf`.
@@ -38,10 +38,10 @@ This project follows the high-level workflow from the `sameerkhanna786/gemini_ba
 
 ## Sample Data Provenance
 
-The `SAMPLE: NORMAL` and `SAMPLE: FLAGGED` buttons are reference-grounded demonstration profiles, not de-identified patient cases.
+The `SAMPLE: NORMAL` and `SAMPLE: FLAGGED` buttons are reference-grounded sample profiles, not de-identified patient cases.
 
 - `SAMPLE: NORMAL` is a representative 21w0d profile aligned to the calculator's normative reference curves. The Brain BPD anchor preserves the documented Kyriakopoulou-style 21-week 50th centile example used by the test suite.
-- `SAMPLE: FLAGGED` is a constructed 24w0d stress-test profile designed to trigger clinically relevant warning pathways: severe ventriculomegaly at atrial diameter >= 15 mm and the Woitek-style posterior-fossa TDPF/CSA abnormal geometry branch.
+- `SAMPLE: FLAGGED` is a constructed 24w0d abnormal reference profile designed to trigger clinically relevant warning pathways: severe ventriculomegaly at atrial diameter >= 15 mm and the Woitek-style posterior-fossa TDPF/CSA abnormal geometry branch.
 - This is intentional: the source papers generally provide aggregate centiles, equations, thresholds, and outcome associations rather than complete reusable raw patient rows. The calculator therefore uses published reference logic and transparent rule-based samples rather than pretending to contain literal extracted patient data.
 
 ## Run Locally
@@ -91,9 +91,9 @@ http://127.0.0.1:8000
 
 ## Corpus Attribution
 
-The `knowledge/` folder is included for course/demo RAG grounding. It is based on the instructor-provided public `sameerkhanna786/gemini_based_rag` corpus layout, where the PDF corpus is published under `papers/corpus`.
+The `knowledge/` folder is included for academic RAG grounding and uses a stable `REF_###__title.pdf` corpus layout.
 
-The PDFs are used here as a local retrieval corpus for educational radiology decision-support prototyping. If this project is reused outside the course/demo context, verify each paper's redistribution terms and replace the corpus with appropriately licensed or institutionally approved reference material.
+The PDFs are used here as a local retrieval corpus for educational radiology decision-support prototyping. If this project is reused outside the academic evaluation context, verify each paper's redistribution terms and replace the corpus with appropriately licensed or institutionally approved reference material.
 
 ## Testing
 

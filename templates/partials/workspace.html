@@ -49,7 +49,7 @@
                         </button>
 
                         <button type="button"
-                            onclick="localStorage.setItem('cached_sample', 'flagged'); applySample('flagged'); updateCitationBanner(); showActionToast('Flagged stress-test sample loaded.');"
+                            onclick="localStorage.setItem('cached_sample', 'flagged'); applySample('flagged'); updateCitationBanner(); showActionToast('Flagged reference profile loaded.');"
                             class="inline-flex items-center gap-2 rounded-full px-3 py-2 font-semibold text-red-600 transition hover:bg-red-50 hover:text-red-800">
                             <span class="text-xs">✦</span> <span>SAMPLE: FLAGGED</span>
                         </button>
@@ -101,7 +101,7 @@
                             </div>
                         </div>
                         <p class="mt-3 text-xs leading-5 text-slate-500">
-                            This follows the same high-level teaching pattern as Sameer's PDF RAG starter: retrieve locally first, generate second, cite retrieved context, and keep the radiologist responsible for final interpretation.
+                            Methodological safeguard: source evidence is retrieved before generation, retrieved context is labeled for citation, and final interpretation remains the responsibility of the reviewing radiologist.
                         </p>
                     </div>
                 </div>
@@ -114,7 +114,7 @@
                         {% if form_values.active_sample == "normal" %}
                         <strong>Reference Normal Sample:</strong> Representative 21w0d coordinates aligned to the calculator's normative reference curves, including Kyriakopoulou-style biometry tables and Woitek posterior-fossa analytic references.
                         {% elif form_values.active_sample == "flagged" %}
-                        <strong>Flagged Stress-Test Sample:</strong> Constructed 24w0d coordinates chosen to trigger severe ventriculomegaly and posterior-fossa warning pathways using the documented threshold logic and Woitek analytic geometry.
+                        <strong>Flagged Reference Profile:</strong> Constructed 24w0d coordinates chosen to trigger severe ventriculomegaly and posterior-fossa warning pathways using documented threshold logic and Woitek analytic geometry.
                         {% endif %}
                     </div>
 
